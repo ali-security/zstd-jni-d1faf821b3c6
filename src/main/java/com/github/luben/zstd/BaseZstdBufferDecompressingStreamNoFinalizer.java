@@ -28,10 +28,16 @@ public abstract class BaseZstdBufferDecompressingStreamNoFinalizer implements Cl
     }
 
     public boolean hasRemaining() {
-        return !streamEnd && (source.hasRemaining() || !finishedFrame);
+        return !closed && !streamEnd && (source.hasRemaining() || !finishedFrame);
     }
 
     public BaseZstdBufferDecompressingStreamNoFinalizer setDict(byte[] dict) throws IOException {
+        if (dict == null) {
+            throw new NullPointerException("dict");
+        }
+        if (closed) {
+            throw new IOException("Stream closed");
+        }
         long size = Zstd.loadDictDecompress(stream, dict, dict.length);
         if (Zstd.isError(size)) {
             throw new ZstdIOException(size);
@@ -40,6 +46,12 @@ public abstract class BaseZstdBufferDecompressingStreamNoFinalizer implements Cl
     }
 
     public BaseZstdBufferDecompressingStreamNoFinalizer setDict(ZstdDictDecompress dict) throws IOException {
+        if (dict == null) {
+            throw new NullPointerException("dict");
+        }
+        if (closed) {
+            throw new IOException("Stream closed");
+        }
         dict.acquireSharedLock();
         try {
             long size = Zstd.loadFastDictDecompress(stream, dict);
@@ -53,6 +65,9 @@ public abstract class BaseZstdBufferDecompressingStreamNoFinalizer implements Cl
     }
 
     public BaseZstdBufferDecompressingStreamNoFinalizer setLongMax(int windowLogMax) throws IOException {
+        if (closed) {
+            throw new IOException("Stream closed");
+        }
         long size = Zstd.setDecompressionLongMax(stream, windowLogMax);
         if (Zstd.isError(size)) {
             throw new ZstdIOException(size);
